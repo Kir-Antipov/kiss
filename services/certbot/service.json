@@ -1,0 +1,22 @@
+{
+  "name": "certbot",
+  "version": "1.0.0",
+  "displayName": "Certbot",
+  "description": "A service that automates the renewal of SSL certificates using the EFF's Certbot tool.",
+  "files": {
+    "ssl-renew.sh": "/usr/local/bin/ssl-renew"
+  },
+  "jobs": {
+    "/usr/local/bin/ssl-renew": "0 0 * * *"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kir-Antipov/kiss"
+  },
+  "author": "Kir-Antipov",
+  "license": "MIT",
+  "homepage": "https://github.com/Kir-Antipov/kiss/tree/master/services/certbot#readme",
+  "dependencies": [
+    "certbot"
+  ]
+}
