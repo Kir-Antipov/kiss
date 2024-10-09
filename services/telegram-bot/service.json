@@ -1,0 +1,38 @@
+{
+  "name": "telegram-bot",
+  "version": "1.0.0",
+  "displayName": "Telegram Bot",
+  "description": "A custom Telegram bot designed to manage the Outline Server.",
+  "scripts": {
+    "install": "./install.sh",
+    "uninstall": "./uninstall.sh",
+    "backup": "./backup.sh \"$1\"",
+    "restore": "./restore.sh \"$1\""
+  },
+  "files": {
+    "backup.sh": "/usr/local/bin/telegram-bot-backup",
+    "restore.sh": "/usr/local/bin/telegram-bot-restore"
+  },
+  "jobs": {
+    "/usr/local/bin/telegram-bot-backup": "0 0 * * *"
+  },
+  "proxies": {
+    "bot.*": "*:21520",
+    "tunnel.*": "*:21521"
+  },
+  "data": {
+    "backup": "/opt/telegram-bot/backups/latest.bak"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kir-Antipov/kiss"
+  },
+  "author": "Kir-Antipov",
+  "license": "MIT",
+  "homepage": "https://github.com/Kir-Antipov/kiss/tree/master/services/telegram-bot#readme",
+  "dependencies": [
+    "docker",
+    "sqlite3",
+    "tar"
+  ]
+}
