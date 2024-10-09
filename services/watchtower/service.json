@@ -1,0 +1,20 @@
+{
+  "name": "watchtower",
+  "version": "1.0.0",
+  "displayName": "Watchtower",
+  "description": "A service that automatically updates your Docker containers.",
+  "scripts": {
+    "install": "./install.sh",
+    "uninstall": "./uninstall.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kir-Antipov/kiss"
+  },
+  "author": "Kir-Antipov",
+  "license": "MIT",
+  "homepage": "https://github.com/Kir-Antipov/kiss/tree/master/services/watchtower#readme",
+  "dependencies": [
+    "docker"
+  ]
+}
