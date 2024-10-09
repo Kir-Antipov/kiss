@@ -24,7 +24,7 @@
     "url": "https://github.com/Kir-Antipov/kiss"
   },
   "author": "Kir-Antipov",
-  "license": "ARR",
+  "license": "MIT",
   "homepage": "https://github.com/Kir-Antipov/kiss/tree/master/services/outline-server#readme",
   "dependencies": [
     "docker",
