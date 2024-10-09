@@ -1,0 +1,36 @@
+{
+  "name": "outline-server",
+  "version": "1.0.0",
+  "displayName": "Outline Server",
+  "description": "A self-hosted VPN server designed to provide secure internet access.",
+  "scripts": {
+    "install": "./install.sh",
+    "uninstall": "./uninstall.sh",
+    "backup": "./backup.sh \"$1\"",
+    "restore": "./restore.sh \"$1\""
+  },
+  "files": {
+    "backup.sh": "/usr/local/bin/outline-server-backup",
+    "restore.sh": "/usr/local/bin/outline-server-restore"
+  },
+  "jobs": {
+    "/usr/local/bin/outline-server-backup": "0 0 * * *"
+  },
+  "data": {
+    "backup": "/opt/outline/backups/latest.bak"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kir-Antipov/kiss"
+  },
+  "author": "Kir-Antipov",
+  "license": "ARR",
+  "homepage": "https://github.com/Kir-Antipov/kiss/tree/master/services/outline-server#readme",
+  "dependencies": [
+    "docker",
+    "openssl",
+    "curl",
+    "tar",
+    "jq"
+  ]
+}
