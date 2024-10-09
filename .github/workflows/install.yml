@@ -1,0 +1,89 @@
+name: install
+
+on: [workflow_dispatch]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add remote server to `known_hosts`
+        run: |
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+
+      - name: Get latest backup id
+        id: get-latest-backup
+        run: |
+          BACKUP_WORKFLOW_ID=$(
+            curl -fsSL \
+              -H 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+              -H 'content-type: application/json' \
+              "https://api.github.com/repos/${{ github.repository }}/actions/workflows" |
+            jq -j '.workflows[] | select(.name == "backup").id' || :
+          )
+          LAST_BACKUP_RUN_ID=$(
+            curl -fsSL \
+              -H 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+              -H 'content-type: application/json' \
+              https://api.github.com/repos/${{ github.repository }}/actions/workflows/${BACKUP_WORKFLOW_ID}/runs?status=success |
+            jq -j '.workflow_runs[0].id // ""' || :
+          )
+          echo "${LAST_BACKUP_RUN_ID}"
+          echo "id=${LAST_BACKUP_RUN_ID}" >> "${GITHUB_OUTPUT}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download the latest backup
+        if: steps.get-latest-backup.outputs.id
+        uses: actions/download-artifact@v4
+        with:
+          name: artifact
+          run-id: ${{ steps.get-latest-backup.outputs.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decrypt the backup
+        if: steps.get-latest-backup.outputs.id
+        run: |
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -salt \
+            -in kiss.bak.enc -out kiss.bak -pass env:BACKUP_KEY
+        env:
+          BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
+
+      - name: Build
+        run: ./kiss.sh build -o ./kiss
+
+      - name: Install
+        run: |
+          if [ -f ./kiss.bak ]; then
+            ./kiss ssh -i ~/.ssh/id_rsa "${SSH_DEST}" recreate ./kiss.bak \
+              -e "${KISS_EMAIL}" -d "${KISS_DOMAIN}"
+          else
+            ./kiss ssh -i ~/.ssh/id_rsa "${SSH_DEST}" install \
+              -e "${KISS_EMAIL}" -d "${KISS_DOMAIN}"
+          fi
+        env:
+          SSH_DEST: ${{ secrets.SSH_USER || 'root' }}@${{ secrets.SSH_HOST }}
+          KISS_EMAIL: ${{ secrets.KISS_EMAIL }}
+          KISS_DOMAIN: ${{ secrets.KISS_DOMAIN }}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          [ -f ~/.ssh/id_rsa ] && shred -fuz ~/.ssh/id_rsa && echo "Shredded 'id_rsa'"
+          [ -f ./kiss.bak ] && shred -fuz ./kiss.bak && echo "Shredded 'kiss.bak'"
+          :

@@ -1,0 +1,66 @@
+name: backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 12 * * *"
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for required secrets
+        run: |
+          [ -n "${SSH_HOST}" ] &&
+          [ -n "${SSH_PRIVATE_KEY}" ] &&
+          [ -n "${BACKUP_KEY}" ]
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add remote server to `known_hosts`
+        run: |
+          ssh-keyscan -H "${SSH_HOST}" >> ~/.ssh/known_hosts
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+
+      - name: Build
+        run: ./kiss.sh build -o ./kiss
+
+      - name: Create a backup
+        run: |
+          ./kiss ssh -i ~/.ssh/id_rsa "${SSH_DEST}" backup -o ./kiss.bak
+        env:
+          SSH_DEST: ${{ secrets.SSH_USER || 'root' }}@${{ secrets.SSH_HOST }}
+
+      - name: Encrypt the backup
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt \
+            -in kiss.bak -out kiss.bak.enc -pass env:BACKUP_KEY
+        env:
+          BACKUP_KEY: ${{ secrets.BACKUP_KEY }}
+
+      - name: Upload the backup
+        uses: actions/upload-artifact@v4
+        with:
+          path: kiss.bak.enc
+          if-no-files-found: error
+          retention-days: ${{ vars.BACKUP_RETENTION_DAYS || 90 }}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          [ -f ~/.ssh/id_rsa ] && shred -fuz ~/.ssh/id_rsa && echo "Shredded 'id_rsa'"
+          [ -f ./kiss.bak ] && shred -fuz ./kiss.bak && echo "Shredded 'kiss.bak'"
+          :
